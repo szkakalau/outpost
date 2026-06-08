@@ -1,12 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-);
+function getSupabase() {
+  const { createClient } = require('@supabase/supabase-js');
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) return null;
+  return createClient(url, key);
+}
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -19,7 +21,9 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
 
-    const { error: err } = await supabase.auth.signInWithOtp({
+    const sb = getSupabase();
+    if (!sb) { setError('Supabase not configured'); setLoading(false); return; }
+    const { error: err } = await sb.auth.signInWithOtp({
       email,
       options: {
         emailRedirectTo: `${window.location.origin}/auth/confirm`,
