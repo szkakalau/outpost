@@ -1,9 +1,17 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM = process.env.OUTPOST_EMAIL_FROM || 'Outpost <onboarding@resend.dev>';
+const FROM = 'Outpost <onboarding@resend.dev>';
+
+function getResend() {
+  const key = process.env.RESEND_API_KEY;
+  if (!key || key === 're_placeholder') return null;
+  return new Resend(key);
+}
 
 export async function sendDailyDigest(toEmail, digest) {
+  const resend = getResend();
+  if (!resend) return { sent: false, error: 'Resend not configured' };
+
   const { leadsWithDrafts, totalScanned, totalScored } = digest;
 
   if (!leadsWithDrafts || leadsWithDrafts.length === 0) {
@@ -31,7 +39,12 @@ export async function sendDailyDigest(toEmail, digest) {
   html += `<p>Reply by copying a draft and pasting it in the thread.<br>— Outpost</p>`;
 
   try {
-    const { data, error } = await resend.emails.send({ from: FROM, to: [toEmail], subject: `Outpost — ${leadsWithDrafts.length} leads for ${dateStr}`, html });
+    const { data, error } = await resend.emails.send({
+      from: process.env.OUTPOST_EMAIL_FROM || FROM,
+      to: [toEmail],
+      subject: `Outpost — ${leadsWithDrafts.length} leads for ${dateStr}`,
+      html,
+    });
     if (error) return { sent: false, error: error.message };
     return { sent: true, id: data?.id };
   } catch (e) {
